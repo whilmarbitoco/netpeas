@@ -27,17 +27,16 @@ peas_schedule_modules() {
         [[ ! -f "$module_file" ]] && { skipped=$((skipped + 1)); continue; }
 
         local entry="${module}_module"
-        source "$module_file"
+        source "$module_file" 2>/dev/null || { skipped=$((skipped + 1)); continue; }
         if declare -f "$entry" >/dev/null 2>&1; then
-            "$entry" "$host" "$port" "$state_dir" 2>/dev/null || {
+            "$entry" "$host" "$port" "$state_dir" 2>/dev/null && completed=$((completed + 1)) || {
                 peas_warn "$module module failed for $host:$port"
             }
-            completed=$((completed + 1))
         else
             skipped=$((skipped + 1))
         fi
     done < "$services_file"
 
-    peas_debug "Scheduled: $total, Completed: $completed, Skipped: $skipped"
+    peas_debug "Scheduled: $total, Completed: $completed, Skipped: $skipped" || true
     return 0
 }

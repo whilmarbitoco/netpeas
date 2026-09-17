@@ -18,7 +18,7 @@ peas_render_findings_text() {
     peas_section "Findings"
     for finding in "${FINDINGS[@]}"; do
         IFS='|' read -r host port service type severity confidence title evidence source recommendation <<< "$finding"
-        peas_section "$host:$port — $title"
+        peas_section "$host:$port \u2014 $title"
         peas_detail "Service: $service"
         peas_detail "Severity: $severity | Confidence: $confidence"
         [[ -n "$evidence" ]] && peas_detail "Evidence: $evidence"
@@ -28,19 +28,24 @@ peas_render_findings_text() {
 }
 
 peas_render_findings_json() {
-    echo '{'
-    echo '  "scan_id": "'"$(date +%s)"'",'
-    echo '  "timestamp": "'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'",'
-    echo '  "mode": "'"$(peas_get_mode)"'",'
-    echo '  "total_findings": '${#FINDINGS[@]}','
-    echo '  "findings": ['
+    local json_file
+    json_file="$(mktemp)"
+    {
+        echo '{'
+        echo '  "scan_id": "'"$(date +%s)"'",'
+        echo '  "timestamp": "'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'",'
+        echo '  "mode": "'"$(peas_get_mode)"'",'
+        echo '  "total_findings": '${#FINDINGS[@]}','
+        echo '  "findings": ['
 
-    local count=0
-    for finding in "${FINDINGS[@]}"; do
-        ((count++))
-        IFS='|' read -r host port service type severity confidence title evidence source recommendation <<< "$finding"
+        local count=0
+        for finding in "${FINDINGS[@]}"; do
+            ((count++))
+            IFS='|' read -r host port service type severity confidence title evidence source recommendation <<< "$finding"
 
-        cat << FINDING_JSON
+            [[ $count -gt 1 ]] && echo "    ,"
+
+            cat << FINDING_JSON
     {
       "host": "${host}",
       "port": "${port}",
@@ -54,11 +59,14 @@ peas_render_findings_json() {
       "recommendation": "${recommendation}"
     }
 FINDING_JSON
-        [[ $count -lt ${#FINDINGS[@]} ]] && echo "    ,"
-    done
+        done
 
-    echo '  ]'
-    echo '}'
+        echo '  ]'
+        echo '}'
+    } > "$json_file"
+
+    cat "$json_file"
+    rm -f "$json_file"
 }
 
 peas_render_summary() {

@@ -1,15 +1,4 @@
 #!/usr/bin/env bash
-#
-# NetPEAS — lib/colors.sh
-# Terminal color definitions and formatting helpers.
-#
-
-# Prevent double-source
-[[ -n "${_NETPEAS_COLORS_LOADED:-}" ]] && return 0
-readonly _NETPEAS_COLORS_LOADED=1
-
-
-# ── Colors ────────────────────────────────────────────────────────────────────
 readonly RED='\033[0;31m'
 readonly GREEN='\033[0;32m'
 readonly YELLOW='\033[1;33m'
@@ -20,42 +9,26 @@ readonly WHITE='\033[1;37m'
 readonly DIM='\033[2m'
 readonly NC='\033[0m'
 
-# ── Symbols ───────────────────────────────────────────────────────────────────
-readonly SYM_INFO="${BLUE}[+]${NC}"
-readonly SYM_WARN="${YELLOW}[!]${NC}"
-readonly SYM_ERROR="${RED}[-]${NC}"
-readonly SYM_FINDING="${PURPLE}[*]${NC}"
-readonly SYM_DEBUG="${DIM}[.]${NC}"
+readonly SYM_INFO='\033[0;34m[+]\033[0m'
+readonly SYM_WARN='\033[1;33m[!]\033[0m'
+readonly SYM_ERROR='\033[0;31m[-]\033[0m'
+readonly SYM_FINDING='\033[0;35m[*]\033[0m'
+readonly SYM_DEBUG='\033[2m[.]\033[0m'
 
-# ── Severity colors ────────────────────────────────────────────────────────────
-readonly SEV_INFO="${BLUE}INFO${NC}"
-readonly SEV_LOW="${GREEN}LOW${NC}"
-readonly SEV_MED="${YELLOW}MEDIUM${NC}"
-readonly SEV_HIGH="${RED}HIGH${NC}"
-readonly SEV_CRIT="${RED}CRITICAL${NC}"
+readonly SEV_INFO='\033[0;34mINFO\033[0m'
+readonly SEV_LOW='\033[0;32mLOW\033[0m'
+readonly SEV_MED='\033[1;33mMEDIUM\033[0m'
+readonly SEV_HIGH='\033[0;31mHIGH\033[0m'
+readonly SEV_CRIT='\033[0;31mCRITICAL\033[0m'
 
-# ── Functions ─────────────────────────────────────────────────────────────────
-
-peas_info()    { echo -e "${SYM_INFO} $*"; }
-peas_warn()    { echo -e "${SYM_WARN} $*" >&2; }
-peas_error()   { echo -e "${SYM_ERROR} $*" >&2; }
-peas_debug()   { [[ "${VERBOSE:-0}" -ge 1 ]] && echo -e "${SYM_DEBUG} $*" >&2 || true; }
-
-peas_finding() {
-    local severity="$1"; shift
-    local sev_colored
-    case "${severity,,}" in
-        info)     sev_colored="${SEV_INFO}" ;;
-        low)      sev_colored="${SEV_LOW}" ;;
-        medium)   sev_colored="${SEV_MED}" ;;
-        high)     sev_colored="${SEV_HIGH}" ;;
-        critical) sev_colored="${SEV_CRIT}" ;;
-        *)        sev_colored="${severity}" ;;
-    esac
-    echo -e "${SYM_FINDING} ${sev_colored} $*"
+peas_suppress_output() {
+    [[ "${OUTPUT_FORMAT:-text}" == "json" ]]
 }
 
-peas_section()    { echo ""; echo -e "${CYAN}═══ $* ═══${NC}"; }
-peas_subsection() { echo -e "  ${WHITE}$*${NC}"; }
-peas_detail()     { echo -e "    ${DIM}$*${NC}"; }
-peas_bullet()     { echo -e "    ${DIM}•${NC} $*"; }
+peas_info()    { if ! peas_suppress_output; then echo -e "${SYM_INFO} $*"; fi; }
+peas_warn()    { echo -e "${SYM_WARN} $*" >&2; }
+peas_section() { if ! peas_suppress_output; then echo ""; echo -e "${CYAN}═══ $* ═══${NC}"; fi; }
+peas_subsection() { if ! peas_suppress_output; then echo -e "  ${WHITE}$*${NC}"; fi; }
+peas_detail()  { if ! peas_suppress_output; then echo -e "    ${DIM}$*${NC}"; fi; }
+peas_bullet()  { if ! peas_suppress_output; then echo -e "    ${DIM}•${NC} $*"; fi; }
+peas_debug()   { if [[ $VERBOSE -ge 2 ]]; then echo -e "${SYM_DEBUG} $*" >&2; fi; }
