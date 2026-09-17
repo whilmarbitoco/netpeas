@@ -31,29 +31,34 @@ peas_discover_services() {
 
     local host="" ports_line=""
     while IFS= read -r line; do
-        [[ "$line" =~ ^#|^Host:\ [0-9.]+\ \(.*\)\ +Status:\ ]] || continue
-        
-        if [[ "$line" =~ Host:\ ([0-9.]+)\ +\((.*)\) ]]; then
+        # Skip comments
+        [[ "$line" =~ ^# ]] && continue
+        # Skip Status lines
+        [[ "$line" =~ Status: ]] && continue
+
+        # Parse Host line
+        if [[ "$line" =~ Host:\ ([0-9.]+) ]]; then
             host="${BASH_REMATCH[1]}"
-            [[ -n "${BASH_REMATCH[2]}" ]] && host="${BASH_REMATCH[1]} (${BASH_REMATCH[2]})"
         fi
-        
+
+        # Parse Ports line
         if [[ "$line" =~ Ports:\ (.+) ]]; then
             ports_line="${BASH_REMATCH[1]}"
             IFS=',' read -ra PORTS <<< "$ports_line"
             for p in "${PORTS[@]}"; do
                 p="$(echo "$p" | xargs)"
-                local port_num state service version
+                # Format: 22/open/tcp//ssh//OpenSSH 8.2p1 Ubuntu/
                 IFS='/' read -ra FIELDS <<< "$p"
-                port_num="${FIELDS[0]}"
-                state="${FIELDS[1]}"
-                service="${FIELDS[4]:-}"
+                local port_num="${FIELDS[0]}"
+                local state="${FIELDS[1]}"
+                local service="${FIELDS[4]:-}"
+                local version=""
                 [[ ${#FIELDS[@]} -gt 5 ]] && version="${FIELDS[5]}"
-                
+
                 [[ "$state" != "open" ]] && continue
                 [[ "$port_num" == "0" ]] && continue
-                
-                echo "${host}|${port_num}|tcp|${service}|${version:-}|" >> "$services_file"
+
+                echo "${host}|${port_num}|tcp|${service}|${version}|" >> "$services_file"
                 peas_info "Found: $host:$port_num $service"
             done
         fi

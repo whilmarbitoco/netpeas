@@ -11,17 +11,18 @@ run_test() {
     local name="$1" script="$2"
     ((TOTAL++))
     echo -e "${YELLOW}  ▶ $name${NC}"
-    local result tmpfile
-    tmpfile="$(mktemp)"
+    local tmpfile="$(mktemp)"
     cat > "$tmpfile" << TESTEOF
 #!/usr/bin/env bash
 set -uo pipefail
 source '${SCRIPT_DIR}/core/args.sh' 2>/dev/null
+source '${SCRIPT_DIR}/lib/tools.sh' 2>/dev/null
+source '${SCRIPT_DIR}/lib/utils.sh' 2>/dev/null
+source '${SCRIPT_DIR}/core/findings.sh' 2>/dev/null
 $script
 TESTEOF
     if bash "$tmpfile" 2>/dev/null; then
-        ((PASSED++))
-        echo -e "${GREEN}  ✓ PASS${NC}"
+        ((PASSED++)); echo -e "${GREEN}  ✓ PASS${NC}"
     else
         ((FAILED++))
     fi
@@ -32,6 +33,8 @@ echo ""
 echo "╔══════════════════════════════════════════╗"
 echo "║        NetPEAS Test Suite v1.0          ║"
 echo "╚══════════════════════════════════════════╝"
+
+# ── test_args ─────────────────────────────────────────────────────────────────
 echo ""
 echo "━━━ test_args ━━━"
 
@@ -55,6 +58,34 @@ run_test "multiple_targets" "peas_parse_args 127.0.0.1 127.0.0.2 >/dev/null 2>&1
 run_test "state_dir" "peas_parse_args --state-dir /tmp/x 127.0.0.1 >/dev/null 2>&1; [[ \$STATE_DIR == /tmp/x ]]"
 run_test "combined_flags" "peas_parse_args --fast --json --timeout 3 127.0.0.1 >/dev/null 2>&1; [[ \$(peas_get_mode) == fast && \$(peas_get_output_format) == json && \$(peas_get_timeout) == 3 ]]"
 
+# ── test_tools ───────────────────────────────────────────────────────────────
+echo ""
+echo "━━━ test_tools ━━━"
+
+run_test "has_curl" "peas_has_tool curl"
+run_test "missing_tool" "! peas_has_tool enum4linux-ng"
+run_test "extract_version" "[[ \$(peas_extract_version 'Apache 2.4.49') == 2.4.49 ]]"
+run_test "extract_no_version" "[[ -z \$(peas_extract_version 'Unknown') ]]"
+
+# ── test_utils ───────────────────────────────────────────────────────────────
+echo ""
+echo "━━━ test_utils ━━━"
+
+run_test "validate_ip" "peas_validate_ip 10.10.10.24"
+run_test "validate_cidr" "peas_validate_cidr 10.10.10.0/24"
+run_test "validate_host" "peas_validate_host hostname.local"
+run_test "mktemp_dir" "d=\$(peas_mktemp_dir); [[ -d \$d ]]; rm -rf \$d"
+run_test "truncate" "[[ \$(peas_truncate 'hello' 80) == hello ]]"
+run_test "extract" "[[ \$(peas_extract 'Apache/2.4.49' '(\d+\.\d+\.\d+)') == 2.4.49 ]]"
+
+# ── test_findings ────────────────────────────────────────────────────────────
+echo ""
+echo "━━━ test_findings ━━━"
+
+run_test "add_finding" "peas_add_finding 10.10.10.24 80 http info info high 'Apache' 'Server header' 'curl' 'Review'; [[ \${#FINDINGS[@]} -eq 1 ]]"
+run_test "multiple_findings" "peas_add_finding h1 p1 s1 t1 sev1 c1 'Title1' 'E1' s1 r1; peas_add_finding h2 p2 s2 t2 sev2 c2 'Title2' 'E2' s2 r2; [[ \${#FINDINGS[@]} -eq 2 ]]"
+
+# ── Summary ──────────────────────────────────────────────────────────────────
 echo ""
 echo "══════════════════════════════════════════"
 echo "  Total: $TOTAL"

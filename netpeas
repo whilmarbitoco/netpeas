@@ -1,15 +1,11 @@
 #!/usr/bin/env bash
 #
-# NetPEAS — Main entry point
+# NetPEAS v1.0 — Main entry point
 #
 
 set -Eeuo pipefail
 
-# ── Resolve script dir ───────────────────────────────────────────────────────
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# ── Load core libraries ─────────────────────────────────────────────────────
 
 source "${SCRIPT_DIR}/lib/colors.sh"
 source "${SCRIPT_DIR}/lib/utils.sh"
@@ -21,17 +17,14 @@ source "${SCRIPT_DIR}/core/discovery.sh"
 source "${SCRIPT_DIR}/core/scheduler.sh"
 source "${SCRIPT_DIR}/core/findings.sh"
 
-# ── Main ──────────────────────────────────────────────────────────────────────
-
 main() {
-    peas_parse_args "$@"
+    peas_parse_args "$@" || exit $?
 
     echo ""
     echo -e "${CYAN}╔══════════════════════════════════════════╗${NC}"
     echo -e "${CYAN}║  NetPEAS v1.0 — Network Enum & Triage  ║${NC}"
     echo -e "${CYAN}╚══════════════════════════════════════════╝${NC}"
 
-    # Initialize workspace
     local state_dir
     if [[ -n "$STATE_DIR" ]]; then
         mkdir -p "$STATE_DIR"
@@ -45,22 +38,14 @@ main() {
     peas_info "Workspace: $state_dir"
     peas_info "Mode: $MODE"
 
-    # Detect tools
     peas_detect_tools || exit 1
 
-    # Discover
     peas_discover_services "${TARGETS[0]}" "$state_dir"
 
-    # Enumerate
     peas_schedule_modules "${state_dir}/services.txt" "$state_dir"
 
-    # Intelligence (post-enumeration)
     peas_section "Intelligence"
-
-    # Render
     peas_render_findings
-
-    # Summary
     peas_render_summary "${#TARGETS[@]}" "$(wc -l < "${state_dir}/services.txt" 2>/dev/null || echo 0)"
 
     peas_info "Scan complete"
