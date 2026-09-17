@@ -7,7 +7,6 @@
 [[ -n "${_NETPEAS_MODULE_DNS_LOADED:-}" ]] && return 0
 readonly _NETPEAS_MODULE_DNS_LOADED=1
 
-set -Eeuo pipefail
 
 dns_module() {
     local host="$1"

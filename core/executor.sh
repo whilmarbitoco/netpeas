@@ -7,7 +7,6 @@
 [[ -n "${_NETPEAS_EXECUTOR_LOADED:-}" ]] && return 0
 readonly _NETPEAS_EXECUTOR_LOADED=1
 
-set -Eeuo pipefail
 
 # ── Execute with timeout ─────────────────────────────────────────────────────
 

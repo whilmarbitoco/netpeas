@@ -7,7 +7,6 @@
 [[ -n "${_NETPEAS_MODULE_FTP_LOADED:-}" ]] && return 0
 readonly _NETPEAS_MODULE_FTP_LOADED=1
 
-set -Eeuo pipefail
 
 ftp_module() {
     local host="$1"

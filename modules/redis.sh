@@ -7,7 +7,6 @@
 [[ -n "${_NETPEAS_MODULE_REDIS_LOADED:-}" ]] && return 0
 readonly _NETPEAS_MODULE_REDIS_LOADED=1
 
-set -Eeuo pipefail
 
 redis_module() {
     local host="$1"

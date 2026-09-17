@@ -7,7 +7,6 @@
 [[ -n "${_NETPEAS_MODULE_SMTP_LOADED:-}" ]] && return 0
 readonly _NETPEAS_MODULE_SMTP_LOADED=1
 
-set -Eeuo pipefail
 
 smtp_module() {
     local host="$1"

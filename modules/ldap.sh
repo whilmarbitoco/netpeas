@@ -7,7 +7,6 @@
 [[ -n "${_NETPEAS_MODULE_LDAP_LOADED:-}" ]] && return 0
 readonly _NETPEAS_MODULE_LDAP_LOADED=1
 
-set -Eeuo pipefail
 
 ldap_module() {
     local host="$1"

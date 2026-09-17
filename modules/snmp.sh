@@ -7,7 +7,6 @@
 [[ -n "${_NETPEAS_MODULE_SNMP_LOADED:-}" ]] && return 0
 readonly _NETPEAS_MODULE_SNMP_LOADED=1
 
-set -Eeuo pipefail
 
 snmp_module() {
     local host="$1"

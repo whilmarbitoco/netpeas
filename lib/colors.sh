@@ -8,7 +8,6 @@
 [[ -n "${_NETPEAS_COLORS_LOADED:-}" ]] && return 0
 readonly _NETPEAS_COLORS_LOADED=1
 
-set -Eeuo pipefail
 
 # ── Colors ────────────────────────────────────────────────────────────────────
 readonly RED='\033[0;31m'

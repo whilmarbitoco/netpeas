@@ -7,7 +7,6 @@
 [[ -n "${_NETPEAS_MODULE_SMB_LOADED:-}" ]] && return 0
 readonly _NETPEAS_MODULE_SMB_LOADED=1
 
-set -Eeuo pipefail
 
 smb_module() {
     local host="$1"

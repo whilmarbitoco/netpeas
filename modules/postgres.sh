@@ -7,7 +7,6 @@
 [[ -n "${_NETPEAS_MODULE_POSTGRES_LOADED:-}" ]] && return 0
 readonly _NETPEAS_MODULE_POSTGRES_LOADED=1
 
-set -Eeuo pipefail
 
 postgres_module() {
     local host="$1"

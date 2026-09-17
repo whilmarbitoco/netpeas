@@ -7,7 +7,6 @@
 [[ -n "${_NETPEAS_MODULE_MYSQL_LOADED:-}" ]] && return 0
 readonly _NETPEAS_MODULE_MYSQL_LOADED=1
 
-set -Eeuo pipefail
 
 mysql_module() {
     local host="$1"

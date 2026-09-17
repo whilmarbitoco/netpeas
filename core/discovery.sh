@@ -1,15 +1,12 @@
 #!/usr/bin/env bash
 #
 # NetPEAS — core/discovery.sh
-# Host discovery and port scanning using native tools.
+# Real nmap-based host discovery and service detection.
 #
 
 [[ -n "${_NETPEAS_DISCOVERY_LOADED:-}" ]] && return 0
 readonly _NETPEAS_DISCOVERY_LOADED=1
 
-set -Eeuo pipefail
-
-# ── Service discovery ─────────────────────────────────────────────────────────
 
 peas_discover_services() {
     local target="$1"
@@ -17,89 +14,60 @@ peas_discover_services() {
 
     peas_section "Discovery — $target"
 
-    if peas_has_tool nmap; then
-        peas_discover_nmap "$target" "$state_dir"
-    else
-        peas_error "No discovery tool available (nmap required)"
-        return 1
-    fi
-}
-
-# ── Nmap discovery ────────────────────────────────────────────────────────────
-
-peas_discover_nmap() {
-    local target="$1"
-    local state_dir="$2"
-
-    local nmap_cmd=(nmap)
-    local output_file="${state_dir}/nmap_scan.xml"
-
-    # Build command based on mode
+    # Run nmap and parse results directly via grepable output
+    local nmap_opts=(-sC -sV -T4 --open)
     case "$(peas_get_mode)" in
-        fast)
-            nmap_cmd+=(-T4 -F --open)
-            ;;
-        aggressive)
-            nmap_cmd+=(-sC -sV -sT -A --version-intensity 5 -T3)
-            ;;
-        *)
-            nmap_cmd+=(-sC -sV -T4)
-            ;;
+        fast)        nmap_opts=(-T4 -F --open) ;;
+        aggressive)  nmap_opts=(-sC -sV -sT -A --version-intensity 5 -T3) ;;
     esac
 
-    # Add output
-    nmap_cmd+=(-oX "$output_file")
-
-    # Add target
-    nmap_cmd+=("$target")
-
     peas_info "Scanning with nmap..."
-    peas_debug "Command: ${nmap_cmd[*]}"
 
-    local exit_code=0
-    timeout 300 "${nmap_cmd[@]}" || exit_code=$?
+    local gnmap_file="${state_dir}/nmap.gnmap"
+    local cmd_file="${state_dir}/nmap.cmd"
 
-    if [[ "$exit_code" -ne 0 ]]; then
-        peas_warn "Nmap scan returned non-zero: $exit_code"
-    fi
+    timeout 300 nmap "${nmap_opts[@]}" -oG "$gnmap_file" -oN "$cmd_file" "$target" 2>/dev/null || true
 
-    if [[ -f "$output_file" ]]; then
-        peas_parse_nmap_xml "$output_file" "$state_dir"
-    else
-        peas_error "No scan output file produced"
+    if [[ ! -s "$gnmap_file" ]]; then
+        peas_error "No scan results"
         return 1
     fi
-}
 
-# ── Parse Nmap XML output ─────────────────────────────────────────────────────
-
-peas_parse_nmap_xml() {
-    local xml_file="$1"
-    local state_dir="$2"
-
+    # Parse grepable output: Host: IP (hostname)	Status: Up
+    #   Ports: PORT/STATE/SERVICE/VERSION/EXTRA
     local services_file="${state_dir}/services.txt"
     : > "$services_file"
 
-    # Extract host and port info using basic grep/sed
-    # Format: host|port|protocol|service|product|version
+    local host="" ports_line=""
     while IFS= read -r line; do
-        local host port_id protocol service product version
-        host="$(echo "$line" | grep -oP 'addr="\K[^"]+')"
-        port_id="$(echo "$line" | grep -oP 'portid="\K[^"]+')"
-        protocol="$(echo "$line" | grep -oP 'protocol="\K[^"]+')"
-
-        # Extract service info if available
-        service="$(echo "$line" | grep -oP 'name="\K[^"]+' | head -1)"
-        product="$(echo "$line" | grep -oP 'product="\K[^"]+')"
-        version="$(echo "$line" | grep -oP 'version="\K[^"]+')"
-
-        echo "${host:-unknown}|${port_id:-unknown}|${protocol:-tcp}|${service:-unknown}|${product:-}|${version:-}" >> "$services_file"
-
-        if [[ -n "$port_id" && "$port_id" != "unknown" ]]; then
-            peas_info "Found: $host/$port_id $service"
+        if [[ "$line" =~ Host:\ ([0-9.]+)\ +\((.*)\) ]]; then
+            host="${BASH_REMATCH[1]}"
+            # If hostname is empty, use IP
+            [[ -z "${BASH_REMATCH[2]}" ]] || host="${BASH_REMATCH[1]} (${BASH_REMATCH[2]})"
         fi
-    done < "$xml_file"
+        if [[ "$line" =~ Ports:\ (.+) ]]; then
+            ports_line="${BASH_REMATCH[1]}"
+            # Parse comma-separated ports
+            IFS=',' read -ra PORTS <<< "$ports_line"
+            for p in "${PORTS[@]}"; do
+                p="$(echo "$p" | xargs)"  # trim
+                # Format: 22/open/tcp//ssh//OpenSSH 8.2p1 Ubuntu 4ubuntu0.5/
+                local port_num state service version
+                port_num="$(echo "$p" | cut -d'/' -f1)"
+                state="$(echo "$p" | cut -d'/' -f2)"
+                service="$(echo "$p" | cut -d'/' -f5)"
+                version="$(echo "$p" | cut -d'/' -f6- | sed 's/\/$//')"
 
-    peas_info "Service registry saved to $services_file"
+                [[ "$state" != "open" ]] && continue
+                [[ "$port_num" == "0" ]] && continue
+
+                echo "${host}|${port_num}|tcp|${service}|${version:-}|" >> "$services_file"
+                peas_info "Found: $host:$port_num $service"
+            done
+        fi
+    done < "$gnmap_file"
+
+    local count
+    count="$(wc -l < "$services_file" 2>/dev/null || echo 0)"
+    peas_info "Discovered $count open ports"
 }
-

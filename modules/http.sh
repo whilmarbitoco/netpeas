@@ -7,7 +7,6 @@
 [[ -n "${_NETPEAS_MODULE_HTTP_LOADED:-}" ]] && return 0
 readonly _NETPEAS_MODULE_HTTP_LOADED=1
 
-set -Eeuo pipefail
 
 # ── HTTP module ───────────────────────────────────────────────────────────────
 

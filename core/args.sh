@@ -1,92 +1,38 @@
 #!/usr/bin/env bash
-#
-# NetPEAS — core/args.sh
-# Argument parsing and global configuration.
-#
-
 [[ -n "${_NETPEAS_ARGS_LOADED:-}" ]] && return 0
 readonly _NETPEAS_ARGS_LOADED=1
 
-set -Eeuo pipefail
-
-# ── Global state ──────────────────────────────────────────────────────────────
-
 TARGETS=()
-MODE="normal"          # fast, normal, aggressive
+MODE="normal"
 VERBOSE=0
-OUTPUT_FORMAT="text"   # text, json
+OUTPUT_FORMAT="text"
 TIMEOUT=5
 MAX_PARALLEL=4
 STATE_DIR=""
 
-# ── Parse arguments ───────────────────────────────────────────────────────────
-
 peas_parse_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --fast)
-                MODE="fast"
-                MAX_PARALLEL=8
-                shift
-                ;;
-            --aggressive)
-                MODE="aggressive"
-                MAX_PARALLEL=6
-                TIMEOUT=10
-                shift
-                ;;
-            --verbose|-v)
-                VERBOSE=1
-                shift
-                ;;
-            --debug)
-                VERBOSE=2
-                shift
-                ;;
-            --json)
-                OUTPUT_FORMAT="json"
-                shift
-                ;;
-            --timeout)
-                shift
-                TIMEOUT="${1:-5}"
-                shift
-                ;;
-            --parallel)
-                shift
-                MAX_PARALLEL="${1:-4}"
-                shift
-                ;;
-            --state-dir)
-                shift
-                STATE_DIR="$1"
-                shift
-                ;;
-            --help|-h)
-                peas_show_help
-                exit 0
-                ;;
-            -*)
-                peas_error "Unknown option: $1"
-                peas_show_help
-                exit 2
-                ;;
-            *)
-                TARGETS+=("$1")
-                shift
-                ;;
+            --fast) MODE="fast"; MAX_PARALLEL=8; shift ;;
+            --aggressive) MODE="aggressive"; MAX_PARALLEL=6; TIMEOUT=10; shift ;;
+            --verbose|-v) VERBOSE=1; shift ;;
+            --debug) VERBOSE=2; shift ;;
+            --json) OUTPUT_FORMAT="json"; shift ;;
+            --timeout) shift; TIMEOUT="${1:-5}"; shift ;;
+            --parallel) shift; MAX_PARALLEL="${1:-4}"; shift ;;
+            --state-dir) shift; STATE_DIR="$1"; shift ;;
+            --help|-h) peas_show_help; return 2 ;;
+            --*) peas_error "Unknown option: $1"; peas_show_help; return 3 ;;
+            *) TARGETS+=("$1"); shift ;;
         esac
     done
 
-    # Validate
     if [[ ${#TARGETS[@]} -eq 0 ]]; then
         peas_error "No target specified"
         peas_show_help
-        exit 2
+        return 2
     fi
 }
-
-# ── Show help ─────────────────────────────────────────────────────────────────
 
 peas_show_help() {
     cat << 'HELP'
@@ -113,11 +59,8 @@ Examples:
   netpeas 10.10.10.24
   netpeas --fast 192.168.1.0/24
   netpeas --json --aggressive target.local
-
 HELP
 }
-
-# ── Getters ───────────────────────────────────────────────────────────────────
 
 peas_get_mode()            { echo "$MODE"; }
 peas_get_timeout()         { echo "$TIMEOUT"; }

@@ -7,7 +7,6 @@
 [[ -n "${_NETPEAS_MODULE_HTTPS_LOADED:-}" ]] && return 0
 readonly _NETPEAS_MODULE_HTTPS_LOADED=1
 
-set -Eeuo pipefail
 
 https_module() {
     local host="$1"

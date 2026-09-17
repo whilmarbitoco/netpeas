@@ -7,7 +7,6 @@
 [[ -n "${_NETPEAS_TOOLS_LOADED:-}" ]] && return 0
 readonly _NETPEAS_TOOLS_LOADED=1
 
-set -Eeuo pipefail
 
 # ── Tool registry ─────────────────────────────────────────────────────────────
 

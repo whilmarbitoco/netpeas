@@ -7,7 +7,6 @@
 [[ -n "${_NETPEAS_MODULE_SSH_LOADED:-}" ]] && return 0
 readonly _NETPEAS_MODULE_SSH_LOADED=1
 
-set -Eeuo pipefail
 
 ssh_module() {
     local host="$1"
