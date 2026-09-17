@@ -4,8 +4,6 @@
 # SNMP service enumeration.
 #
 
-[[ -n "${_NETPEAS_MODULE_SNMP_LOADED:-}" ]] && return 0
-readonly _NETPEAS_MODULE_SNMP_LOADED=1
 
 
 snmp_module() {
@@ -36,5 +34,6 @@ snmp_module() {
             break
         fi
     done
+    return 0
 }
 

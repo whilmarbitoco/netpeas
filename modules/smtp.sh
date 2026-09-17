@@ -4,8 +4,6 @@
 # SMTP service enumeration.
 #
 
-[[ -n "${_NETPEAS_MODULE_SMTP_LOADED:-}" ]] && return 0
-readonly _NETPEAS_MODULE_SMTP_LOADED=1
 
 
 smtp_module() {
@@ -44,5 +42,6 @@ smtp_module() {
             "SMTP VRFY enabled" "Server responded to VRFY command" "nc" \
             "Disable VRFY command"
     fi
+    return 0
 }
 

@@ -4,8 +4,6 @@
 # DNS service enumeration.
 #
 
-[[ -n "${_NETPEAS_MODULE_DNS_LOADED:-}" ]] && return 0
-readonly _NETPEAS_MODULE_DNS_LOADED=1
 
 
 dns_module() {
@@ -39,5 +37,6 @@ dns_module() {
     local records
     records="$(peas_exec_silent 5 dig @"$host" "$host" ANY +short 2>/dev/null || echo "")"
     [[ -n "$records" ]] && peas_detail "Records: $records"
+    return 0
 }
 

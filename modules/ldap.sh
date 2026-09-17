@@ -4,8 +4,6 @@
 # LDAP service enumeration.
 #
 
-[[ -n "${_NETPEAS_MODULE_LDAP_LOADED:-}" ]] && return 0
-readonly _NETPEAS_MODULE_LDAP_LOADED=1
 
 
 ldap_module() {
@@ -34,5 +32,6 @@ ldap_module() {
             "LDAP anonymous bind" "Server returned data without credentials" "ldapsearch" \
             "Disable anonymous LDAP bind"
     fi
+    return 0
 }
 

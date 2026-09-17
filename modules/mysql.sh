@@ -4,8 +4,6 @@
 # MySQL service enumeration.
 #
 
-[[ -n "${_NETPEAS_MODULE_MYSQL_LOADED:-}" ]] && return 0
-readonly _NETPEAS_MODULE_MYSQL_LOADED=1
 
 
 mysql_module() {
@@ -41,5 +39,6 @@ mysql_module() {
         banner="$(peas_exec_silent 5 bash -c "echo | timeout 5 nc -w3 $host $port 2>/dev/null")"
         [[ -n "$banner" ]] && echo "$banner" >> "$output_file"
     fi
+    return 0
 }
 

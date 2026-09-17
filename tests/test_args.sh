@@ -16,7 +16,7 @@ test_args_ip_target() { run_args 10.10.10.24; assert_eq "10.10.10.24" "${TARGETS
 test_args_cidr_target() { run_args 10.10.10.0/24; assert_eq "10.10.10.0/24" "${TARGETS[0]}" "cidr target"; }
 test_args_hostname_target() { run_args hostname.local; assert_eq "hostname.local" "${TARGETS[0]}" "hostname target"; }
 test_args_timeout() { run_args --timeout 10 127.0.0.1; assert_eq "10" "$(peas_get_timeout)" "timeout"; }
-test_args_default_timeout() { run_args 127.0.0.1; assert_eq "5" "$(peas_get_timeout)" "default timeout"; }
+test_args_default_timeout() { run_args 127.0.0.1; assert_eq "300" "$(peas_get_timeout)" "default timeout"; }
 test_args_parallel() { run_args --parallel 8 127.0.0.1; assert_eq "8" "$(peas_get_parallel)" "parallel"; }
 test_args_default_parallel() { run_args 127.0.0.1; assert_eq "4" "$(peas_get_parallel)" "default parallel"; }
 test_args_verbose_flag() { run_args --verbose 127.0.0.1; assert_eq "1" "$VERBOSE" "verbose flag"; }

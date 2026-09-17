@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-[[ -n "${_NETPEAS_SCHEDULER_LOADED:-}" ]] && return 0
-readonly _NETPEAS_SCHEDULER_LOADED=1
 
 declare -A MODULE_MAP=(
     [http]=http [https]=https [ssh]=ssh [ftp]=ftp [smb]=smb

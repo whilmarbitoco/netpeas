@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-[[ -n "${_NETPEAS_CVE_LOADED:-}" ]] && return 0
-readonly _NETPEAS_CVE_LOADED=1
 
 declare -A CVE_CACHE=()
 

@@ -4,8 +4,6 @@
 # Safe command execution with timeout, logging, and error handling.
 #
 
-[[ -n "${_NETPEAS_EXECUTOR_LOADED:-}" ]] && return 0
-readonly _NETPEAS_EXECUTOR_LOADED=1
 
 
 # ── Execute with timeout ─────────────────────────────────────────────────────

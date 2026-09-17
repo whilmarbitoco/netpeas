@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-[[ -n "${_NETPEAS_SEARCHSPLOIT_LOADED:-}" ]] && return 0
-readonly _NETPEAS_SEARCHSPLOIT_LOADED=1
 
 peas_searchsploit() {
     local query="$1"

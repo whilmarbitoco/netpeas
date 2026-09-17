@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-[[ -n "${_NETPEAS_FINDINGS_LOADED:-}" ]] && return 0
-readonly _NETPEAS_FINDINGS_LOADED=1
 
 declare -a FINDINGS=()
 

@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-[[ -n "${_NETPEAS_DISCOVERY_LOADED:-}" ]] && return 0
-readonly _NETPEAS_DISCOVERY_LOADED=1
 
 peas_discover_services() {
     local target="$1"

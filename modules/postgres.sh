@@ -4,8 +4,6 @@
 # PostgreSQL service enumeration.
 #
 
-[[ -n "${_NETPEAS_MODULE_POSTGRES_LOADED:-}" ]] && return 0
-readonly _NETPEAS_MODULE_POSTGRES_LOADED=1
 
 
 postgres_module() {
@@ -34,5 +32,6 @@ postgres_module() {
             "PostgreSQL accessible" "Connection attempt returned version" "psql" \
             "Verify pg_hba.conf authentication rules"
     fi
+    return 0
 }
 

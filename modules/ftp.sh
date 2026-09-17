@@ -4,8 +4,6 @@
 # FTP service enumeration.
 #
 
-[[ -n "${_NETPEAS_MODULE_FTP_LOADED:-}" ]] && return 0
-readonly _NETPEAS_MODULE_FTP_LOADED=1
 
 
 ftp_module() {
@@ -46,5 +44,6 @@ ftp_module() {
     fi
 
     [[ -n "$version" ]] && peas_searchsploit "FTP $version" 3 2>/dev/null >> "$output_file" || true
+    return 0
 }
 

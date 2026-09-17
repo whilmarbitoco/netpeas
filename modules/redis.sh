@@ -4,8 +4,6 @@
 # Redis service enumeration.
 #
 
-[[ -n "${_NETPEAS_MODULE_REDIS_LOADED:-}" ]] && return 0
-readonly _NETPEAS_MODULE_REDIS_LOADED=1
 
 
 redis_module() {
@@ -36,5 +34,6 @@ redis_module() {
             "Enable Redis AUTH, disable dangerous commands"
         peas_searchsploit "Redis" 3 2>/dev/null >> "$output_file" || true
     fi
+    return 0
 }
 

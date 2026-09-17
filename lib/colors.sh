@@ -27,6 +27,7 @@ peas_suppress_output() {
 
 peas_info()    { if ! peas_suppress_output; then echo -e "${SYM_INFO} $*"; fi; }
 peas_warn()    { echo -e "${SYM_WARN} $*" >&2; }
+peas_error()   { echo -e "${SYM_ERROR} $*" >&2; }
 peas_section() { if ! peas_suppress_output; then echo ""; echo -e "${CYAN}═══ $* ═══${NC}"; fi; }
 peas_subsection() { if ! peas_suppress_output; then echo -e "  ${WHITE}$*${NC}"; fi; }
 peas_detail()  { if ! peas_suppress_output; then echo -e "    ${DIM}$*${NC}"; fi; }

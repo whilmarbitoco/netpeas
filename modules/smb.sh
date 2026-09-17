@@ -4,8 +4,6 @@
 # SMB/CIFS service enumeration.
 #
 
-[[ -n "${_NETPEAS_MODULE_SMB_LOADED:-}" ]] && return 0
-readonly _NETPEAS_MODULE_SMB_LOADED=1
 
 
 smb_module() {
@@ -66,5 +64,6 @@ smb_module() {
         peas_warn "No SMB tools available (enum4linux-ng, smbclient, or nc required)"
         return 1
     fi
+    return 0
 }
 
