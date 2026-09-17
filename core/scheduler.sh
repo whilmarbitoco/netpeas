@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
+[[ -n "${_NETPEAS_SCHEDULER_LOADED:-}" ]] && return 0
+readonly _NETPEAS_SCHEDULER_LOADED=1
 
 declare -A MODULE_MAP=(
     [http]=http [https]=https [ssh]=ssh [ftp]=ftp [smb]=smb
     [dns]=dns [smtp]=smtp [ldap]=ldap [snmp]=snmp [mysql]=mysql
     [postgres]=postgres [postgresql]=postgres [redis]=redis
+    [ad]=ad [nfs]=nfs [rdp]=rdp [docker]=docker [k8s]=k8s
+    [mssql]=mssql [oracle]=oracle [telnet]=telnet [pop3]=pop3
+    [imap]=imap [vnc]=vnc
 )
 
 peas_schedule_modules() {
@@ -19,6 +24,7 @@ peas_schedule_modules() {
     while IFS='|' read -r host port protocol service product version; do
         [[ -z "$port" || "$port" == "0" ]] && continue
         total=$((total + 1))
+        
         local module="${MODULE_MAP[$service]:-}"
         [[ -z "$module" ]] && { skipped=$((skipped + 1)); continue; }
         local module_file="${SCRIPT_DIR}/modules/${module}.sh"
@@ -35,6 +41,6 @@ peas_schedule_modules() {
         fi
     done < "$services_file"
 
-    peas_debug "Scheduled: $total, Completed: $completed, Skipped: $skipped" || true
+    peas_debug "Scheduled: $total, Completed: $completed, Skipped: $skipped"
     return 0
 }

@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
-#
-# NetPEAS — modules/ftp.sh
-# FTP service enumeration.
-#
-
-
+[[ -n "${_NETPEAS_MODULE_FTP_LOADED:-}" ]] && return 0
+readonly _NETPEAS_MODULE_FTP_LOADED=1
 
 ftp_module() {
     local host="$1"
@@ -16,34 +12,29 @@ ftp_module() {
 
     peas_info "FTP — $host:$port"
 
-    if ! peas_has_tool nc; then
-        peas_warn "nc not available; skipping FTP"
-        return 1
+    # ── Banner Grab ──────────────────────────────────────────────────────────
+    local banner=""
+    if peas_has_tool nc; then
+        banner="$(peas_exec_silent 5 bash -c "echo | timeout 5 nc -w3 $host $port 2>/dev/null" || echo "")"
     fi
-
-    # Banner
-    local banner
-    banner="$(peas_exec_silent 5 bash -c "echo | timeout 5 nc -w3 $host $port 2>/dev/null")"
+    if [[ -z "$banner" ]]; then
+        peas_debug "Cannot reach FTP on $host:$port"
+        return 0
+    fi
     echo "$banner" > "$output_file"
 
-    local version="$(echo "$banner" | grep -oP '\d+\.\d+\.\d+' | head -1)"
+    local version="$(peas_extract_version "$banner")"
     local title="FTP Service"
     [[ -n "$version" ]] && title="FTP — $version"
 
-    peas_add_finding "$host" "$port" "ftp" "info" "info" "observed" \
-        "$title" "Banner: ${banner:0:100}" "nc" "Check for anonymous login"
+    peas_add_finding "$host" "$port" "ftp" "info" "info" observed         "$title" "Banner: ${banner:0:100}" "nc" "Review FTP configuration"
 
-    # Check anonymous login
-    local anon_test
-    anon_test="$(peas_exec_silent 5 bash -c "echo -e 'USER anonymous\r\nQUIT' | timeout 5 nc -w3 $host $port 2>/dev/null")"
-    if echo "$anon_test" | grep -q "230"; then
-        peas_finding "medium" "Anonymous FTP login possible"
-        peas_add_finding "$host" "$port" "ftp" "config" "high" "confirmed" \
-            "Anonymous FTP login" "Server accepted anonymous credentials" "nc" \
-            "Disable anonymous FTP access"
+    # ── Anonymous Login Test ─────────────────────────────────────────────────
+    if peas_has_tool ftp; then
+        local anon_test
+        anon_test="$( (echo "USER anonymous"; echo "PASS anonymous"; echo "QUIT"; sleep 1) | peas_exec_silent 10 ftp -n "$host" "$port" 2>&1 || echo "")"
+        if echo "$anon_test" | grep -q "230"; then
+            peas_add_finding "$host" "$port" "ftp" "anonymous" "high" confirmed                 "Anonymous FTP login allowed" "Login succeeded" "ftp"                 "Disable anonymous FTP access"
+        fi
     fi
-
-    [[ -n "$version" ]] && peas_searchsploit "FTP $version" 3 2>/dev/null >> "$output_file" || true
-    return 0
 }
-

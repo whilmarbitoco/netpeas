@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
-#
-# NetPEAS — modules/mysql.sh
-# MySQL service enumeration.
-#
-
-
+[[ -n "${_NETPEAS_MODULE_MYSQL_LOADED:-}" ]] && return 0
+readonly _NETPEAS_MODULE_MYSQL_LOADED=1
 
 mysql_module() {
     local host="$1"
@@ -16,29 +12,39 @@ mysql_module() {
 
     peas_info "MySQL — $host:$port"
 
-    if ! peas_has_tool mysql; then
-        peas_warn "mysql client not available; skipping MySQL"
-        return 1
-    fi
-
-    # Try anonymous/no-pass connection
-    local result
-    result="$(peas_exec_silent 10 mysql -h "$host" -P "$port" -u root --skip-password -e "SELECT 1" 2>&1 || echo "")"
-    echo "$result" > "$output_file"
-
-    if ! echo "$result" | grep -qi "denied\|error\|access"; then
-        peas_finding "critical" "MySQL root without password"
-        peas_add_finding "$host" "$port" "mysql" "auth" "critical" "confirmed" \
-            "MySQL root login without password" "root login succeeded" "mysql" \
-            "Set strong password for root"
-    fi
-
-    # Banner grab via nc
+    # ── Banner Grab ──────────────────────────────────────────────────────────
+    local banner=""
     if peas_has_tool nc; then
-        local banner
-        banner="$(peas_exec_silent 5 bash -c "echo | timeout 5 nc -w3 $host $port 2>/dev/null")"
-        [[ -n "$banner" ]] && echo "$banner" >> "$output_file"
+        banner="$(peas_exec_silent 5 bash -c "echo | timeout 5 nc -w3 $host $port 2>/dev/null" || echo "")"
     fi
-    return 0
-}
+    if [[ -z "$banner" ]]; then
+        peas_debug "Cannot reach MySQL on $host:$port"
+        return 0
+    fi
+    echo "$banner" > "$output_file"
 
+    local version="$(peas_extract_version "$banner")"
+    local title="MySQL Service"
+    [[ -n "$version" ]] && title="MySQL $version"
+
+    peas_add_finding "$host" "$port" "mysql" "info" "info" observed         "$title" "Banner: ${banner:0:100}" "nc" "Verify MySQL configuration"
+
+    # ── Root No-Password Test ────────────────────────────────────────────────
+    if peas_has_tool mysql; then
+        local login_test
+        login_test="$(peas_exec_silent 10 mysql -h "$host" -P "$port" -u root -e \"SELECT VERSION();\" 2>&1 || echo "")"
+        if [[ -n "$login_test" ]] && ! echo "$login_test" | grep -qi "access denied"; then
+            peas_add_finding "$host" "$port" "mysql" "auth" "critical" confirmed                 "Root login without password" "Login succeeded" "mysql"                 "Set a strong root password"
+            echo "Root login: $login_test" >> "$output_file"
+        fi
+    fi
+
+    # ── Anonymous Access ──────────────────────────────────────────────────────
+    if peas_has_tool mysql; then
+        local anon_test
+        anon_test="$(peas_exec_silent 10 mysql -h "$host" -P "$port" -u \"\" -e \"SELECT 1;\" 2>&1 || echo "")"
+        if [[ -n "$anon_test" ]] && ! echo "$anon_test" | grep -qi "access denied"; then
+            peas_add_finding "$host" "$port" "mysql" "auth" "high" confirmed                 "Anonymous MySQL access" "Login succeeded" "mysql"                 "Disable anonymous access"
+        fi
+    fi
+}

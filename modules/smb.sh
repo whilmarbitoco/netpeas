@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
-#
-# NetPEAS — modules/smb.sh
-# SMB/CIFS service enumeration.
-#
-
-
+[[ -n "${_NETPEAS_MODULE_SMB_LOADED:-}" ]] && return 0
+readonly _NETPEAS_MODULE_SMB_LOADED=1
 
 smb_module() {
     local host="$1"
@@ -16,54 +12,80 @@ smb_module() {
 
     peas_info "SMB — $host:$port"
 
-    # PREFER: enum4linux-ng
+    # ── enum4linux-ng (preferred) ────────────────────────────────────────────
     if peas_has_tool enum4linux-ng; then
-        local enum_out
-        enum_out="$(peas_exec_silent 30 enum4linux-ng -A "$host" 2>/dev/null || echo "")"
-        echo "$enum_out" > "$output_file"
+        local enum_output
+        enum_output="$(peas_exec_silent 30 enum4linux-ng -A "$host" 2>/dev/null || echo "")"
+        if [[ -n "$enum_output" ]]; then
+            echo "$enum_output" > "$output_file"
 
-        local smb_info
-        smb_info="$(echo "$enum_out" | grep -i 'os\|version\|samba' | head -5)"
-        [[ -n "$smb_info" ]] && peas_detail "$smb_info"
+            # Check for null session
+            if echo "$enum_output" | grep -qi "session setup.*success\|null session"; then
+                peas_add_finding "$host" "$port" "smb" "null_session" "high" confirmed                     "Null session access allowed" "enum4linux-ng succeeded" "enum4linux-ng"                     "Disable null session access"
+            fi
 
-        peas_add_finding "$host" "$port" "smb" "enum" "info" "high" \
-            "SMB enumeration" "enum4linux-ng output" "enum4linux-ng" \
-            "Review SMB shares and permissions"
+            # Check for shares
+            local shares="$(echo "$enum_output" | grep -A100 'SHARES' | grep -v '^[[:space:]]*$' | head -20)"
+            if [[ -n "$shares" ]]; then
+                peas_add_finding "$host" "$port" "smb" "shares" "medium" observed                     "SMB shares enumerated" "$shares" "enum4linux-ng"                     "Review share permissions"
+            fi
 
-    # FALLBACK: smbclient + rpcclient
-    elif peas_has_tool smbclient; then
-        local shares
-        shares="$(peas_exec_silent 10 smbclient -L "\\\\$host" -N 2>/dev/null || echo "")"
-        echo "$shares" > "$output_file"
+            # Check for users
+            local users="$(echo "$enum_output" | grep -A100 'USERS' | head -20)"
+            if [[ -n "$users" ]]; then
+                peas_add_finding "$host" "$port" "smb" "users" "medium" observed                     "SMB users enumerated" "$users" "enum4linux-ng"                     "Review user list exposure"
+            fi
 
-        # Check for null session
-        if echo "$shares" | grep -qi "share\|disk\|print"; then
-            local anon_access="Null session — shares listed without credentials"
-            peas_finding "medium" "SMB null session"
-            peas_add_finding "$host" "$port" "smb" "auth" "high" "confirmed" \
-                "Anonymous SMB access" "$anon_access" "smbclient" \
-                "Disable null session access"
+            # Check for password policy
+            local pass_policy="$(echo "$enum_output" | grep -A10 'PASSWORD POLICY')"
+            if [[ -n "$pass_policy" ]]; then
+                peas_add_finding "$host" "$port" "smb" "policy" "low" observed                     "Password policy enumerated" "$pass_policy" "enum4linux-ng"                     "Review password policy"
+            fi
         fi
-
-        if peas_has_tool rpcclient; then
-            local rpc_info
-            rpc_info="$(peas_exec_silent 10 rpcclient -U "" -N "$host" -c "srvinfo" 2>/dev/null || echo "")"
-            [[ -n "$rpc_info" ]] && echo "$rpc_info" >> "$output_file"
-        fi
-
-    # FALLBACK: netcat banner
-    elif peas_has_tool nc; then
-        local banner
-        banner="$(peas_exec_silent 5 bash -c "echo | timeout 5 nc -w3 $host $port 2>/dev/null")"
-        echo "$banner" > "$output_file"
-        peas_add_finding "$host" "$port" "smb" "info" "info" "observed" \
-            "SMB port open" "Banner: ${banner:0:100}" "nc" \
-            "Install enum4linux-ng or smbclient for full enumeration"
-
-    else
-        peas_warn "No SMB tools available (enum4linux-ng, smbclient, or nc required)"
-        return 1
+        return 0
     fi
-    return 0
-}
 
+    # ── smbclient fallback ───────────────────────────────────────────────────
+    if peas_has_tool smbclient; then
+        local share_list
+        share_list="$(peas_exec_silent 10 smbclient -L "//$host" -N 2>/dev/null || echo "")"
+        if [[ -n "$share_list" ]]; then
+            echo "$share_list" > "$output_file"
+
+            if echo "$share_list" | grep -qi "session setup.*success\|anonymous login"; then
+                peas_add_finding "$host" "$port" "smb" "null_session" "high" confirmed                     "Null session access allowed" "smbclient anonymous login succeeded" "smbclient"                     "Disable null session access"
+            fi
+
+            local shares="$(echo "$share_list" | grep -E '^\s+\w+' | grep -v 'IPC\$' | head -10)"
+            if [[ -n "$shares" ]]; then
+                peas_add_finding "$host" "$port" "smb" "shares" "medium" observed                     "SMB shares enumerated" "$shares" "smbclient"                     "Review share permissions"
+            fi
+        fi
+        return 0
+    fi
+
+    # ── rpcclient fallback ───────────────────────────────────────────────────
+    if peas_has_tool rpcclient; then
+        local rpc_output
+        rpc_output="$(peas_exec_silent 10 rpcclient -U "" -N "$host" -c 'srvinfo' 2>/dev/null || echo "")"
+        if [[ -n "$rpc_output" ]]; then
+            echo "$rpc_output" > "$output_file"
+            if echo "$rpc_output" | grep -qi "NT_STATUS"; then
+                peas_add_finding "$host" "$port" "smb" "rpc" "medium" observed                     "RPC response received" "$rpc_output" "rpcclient"                     "Review RPC access"
+            fi
+        fi
+        return 0
+    fi
+
+    # ── Banner Grab (nc) ─────────────────────────────────────────────────────
+    if peas_has_tool nc; then
+        local banner=""
+        banner="$(peas_exec_silent 5 bash -c "echo | timeout 5 nc -w3 $host $port 2>/dev/null" || echo "")"
+        if [[ -n "$banner" ]]; then
+            echo "$banner" > "$output_file"
+            peas_add_finding "$host" "$port" "smb" "info" "info" observed                 "SMB Service" "Banner: ${banner:0:100}" "nc"                 "Verify SMB configuration"
+        fi
+    fi
+
+    peas_add_finding "$host" "$port" "smb" "info" "info" observed         "SMB Service" "Port $port/tcp" "port" "Ensure SMB signing is enabled"
+}

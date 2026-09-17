@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
-#
-# NetPEAS — modules/smtp.sh
-# SMTP service enumeration.
-#
-
-
+[[ -n "${_NETPEAS_MODULE_SMTP_LOADED:-}" ]] && return 0
+readonly _NETPEAS_MODULE_SMTP_LOADED=1
 
 smtp_module() {
     local host="$1"
@@ -16,32 +12,59 @@ smtp_module() {
 
     peas_info "SMTP — $host:$port"
 
-    if ! peas_has_tool nc; then
-        peas_warn "nc not available; skipping SMTP"
-        return 1
+    # ── Banner Grab ──────────────────────────────────────────────────────────
+    local banner=""
+    if peas_has_tool nc; then
+        banner="$(peas_exec_silent 5 bash -c "echo | timeout 5 nc -w3 $host $port 2>/dev/null" || echo "")"
     fi
-
-    # Banner grab
-    local banner
-    banner="$(peas_exec_silent 5 bash -c "echo | timeout 5 nc -w3 $host $port 2>/dev/null")"
+    if [[ -z "$banner" ]]; then
+        peas_debug "Cannot reach SMTP on $host:$port"
+        return 0
+    fi
     echo "$banner" > "$output_file"
 
-    local version="$(echo "$banner" | grep -oP '\d+\.\d+\.\d+' | head -1)"
+    local version="$(peas_extract_version "$banner")"
     local title="SMTP Service"
     [[ -n "$version" ]] && title="SMTP — $version"
 
-    peas_add_finding "$host" "$port" "smtp" "info" "info" "observed" \
-        "$title" "Banner: ${banner:0:100}" "nc" "Check for open relay and user enumeration"
+    peas_add_finding "$host" "$port" "smtp" "info" "info" observed         "$title" "Banner: ${banner:0:100}" "nc" "Review SMTP configuration"
 
-    # VRFY command test
-    local vrfy_test
-    vrfy_test="$(peas_exec_silent 5 bash -c "echo -e 'VRFY root\r\nQUIT' | timeout 5 nc -w3 $host $port 2>/dev/null")"
-    if echo "$vrfy_test" | grep -q "250\|252"; then
-        peas_finding "medium" "SMTP VRFY user enumeration enabled"
-        peas_add_finding "$host" "$port" "smtp" "config" "medium" "confirmed" \
-            "SMTP VRFY enabled" "Server responded to VRFY command" "nc" \
-            "Disable VRFY command"
+    # ── VRFY Test ────────────────────────────────────────────────────────────
+    if peas_has_tool nc; then
+        local vrfy_result
+        vrfy_result="$(peas_exec_silent 5 bash -c "echo VRFY root | timeout 5 nc -w3 $host $port 2>/dev/null" || echo "")"
+        if echo "$vrfy_result" | grep -q "250"; then
+            peas_add_finding "$host" "$port" "smtp" "vrfy" "medium" observed                 "VRFY command allows user enumeration" "$vrfy_result" "nc"                 "Disable VRFY command"
+        fi
+        echo "VRFY: $vrfy_result" >> "$output_file"
     fi
-    return 0
-}
 
+    # ── EXPN Test ────────────────────────────────────────────────────────────
+    if peas_has_tool nc; then
+        local expn_result
+        expn_result="$(peas_exec_silent 5 bash -c "echo EXPN postmaster | timeout 5 nc -w3 $host $port 2>/dev/null" || echo "")"
+        if echo "$expn_result" | grep -q "250"; then
+            peas_add_finding "$host" "$port" "smtp" "expn" "medium" observed                 "EXPN command allows mailing list expansion" "$expn_result" "nc"                 "Disable EXPN command"
+        fi
+        echo "EXPN: $expn_result" >> "$output_file"
+    fi
+
+    # ── STARTTLS Check ───────────────────────────────────────────────────────
+    if peas_has_tool nc; then
+        local starttls_result
+        starttls_result="$(peas_exec_silent 5 bash -c "echo STARTTLS | timeout 5 nc -w3 $host $port 2>/dev/null" || echo "")"
+        if [[ -n "$starttls_result" ]]; then
+            echo "STARTTLS: $starttls_result" >> "$output_file"
+        fi
+    fi
+
+    # ── Open Relay Test ──────────────────────────────────────────────────────
+    if peas_has_tool nc; then
+        local relay_result
+        relay_result="$(peas_exec_silent 5 bash -c "EHLO test.com\nMAIL FROM: <test@test.com>\nRCPT TO: <admin@test.com>\nQUIT | timeout 5 nc -w3 $host $port 2>/dev/null" || echo "")"
+        if echo "$relay_result" | grep -q "250.*250.*250"; then
+            peas_add_finding "$host" "$port" "smtp" "relay" "high" observed                 "Possible open relay" "$relay_result" "nc"                 "Configure SMTP authentication"
+        fi
+        echo "Relay test: $relay_result" >> "$output_file"
+    fi
+}
