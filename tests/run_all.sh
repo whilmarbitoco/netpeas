@@ -62,7 +62,7 @@ run_test "combined_flags" "peas_parse_args --fast --json --timeout 3 127.0.0.1 >
 echo ""
 echo "━━━ test_tools ━━━"
 
-run_test "has_curl" "peas_has_tool curl"
+run_test "has_curl" "peas_detect_tools >/dev/null 2>&1; peas_has_tool curl"
 run_test "missing_tool" "! peas_has_tool enum4linux-ng"
 run_test "extract_version" "[[ \$(peas_extract_version 'Apache 2.4.49') == 2.4.49 ]]"
 run_test "extract_no_version" "[[ -z \$(peas_extract_version 'Unknown') ]]"

@@ -1,8 +1,4 @@
 #!/usr/bin/env bash
-#
-# NetPEAS v1.0 — Main entry point
-#
-
 set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -16,6 +12,8 @@ source "${SCRIPT_DIR}/core/executor.sh"
 source "${SCRIPT_DIR}/core/discovery.sh"
 source "${SCRIPT_DIR}/core/scheduler.sh"
 source "${SCRIPT_DIR}/core/findings.sh"
+source "${SCRIPT_DIR}/core/searchsploit.sh"
+source "${SCRIPT_DIR}/core/cve.sh"
 
 main() {
     peas_parse_args "$@" || exit $?

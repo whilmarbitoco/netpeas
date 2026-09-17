@@ -31,9 +31,9 @@ peas_discover_services() {
 
     local host="" ports_line=""
     while IFS= read -r line; do
-        # Skip comments
-        [[ "$line" =~ ^# ]] && continue
-        # Skip Status lines
+        # Skip comments and empty lines
+        [[ -z "$line" || "$line" =~ ^# ]] && continue
+        # Skip Status line
         [[ "$line" =~ Status: ]] && continue
 
         # Parse Host line
@@ -44,10 +44,15 @@ peas_discover_services() {
         # Parse Ports line
         if [[ "$line" =~ Ports:\ (.+) ]]; then
             ports_line="${BASH_REMATCH[1]}"
+            # Remove "Ignored State: ..." suffix
+            ports_line="${ports_line%	Ignored*}"
+            ports_line="${ports_line% *}"
+            
             IFS=',' read -ra PORTS <<< "$ports_line"
             for p in "${PORTS[@]}"; do
                 p="$(echo "$p" | xargs)"
-                # Format: 22/open/tcp//ssh//OpenSSH 8.2p1 Ubuntu/
+                [[ -z "$p" ]] && continue
+                # Format: 22/open/tcp//ssh//OpenSSH 8.2p1/
                 IFS='/' read -ra FIELDS <<< "$p"
                 local port_num="${FIELDS[0]}"
                 local state="${FIELDS[1]}"
