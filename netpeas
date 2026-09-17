@@ -18,10 +18,16 @@ source "${SCRIPT_DIR}/core/cve.sh"
 main() {
     peas_parse_args "$@" || exit $?
 
-    echo ""
-    echo -e "${CYAN}╔══════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║  NetPEAS v1.0 — Network Enum & Triage  ║${NC}"
-    echo -e "${CYAN}╚══════════════════════════════════════════╝${NC}"
+    local output_format
+    output_format="$(peas_get_output_format)"
+
+    if [[ "$output_format" != "json" ]]; then
+        echo ""
+        echo -e "${CYAN}╔══════════════════════════════════════════╗${NC}"
+        echo -e "${CYAN}║  NetPEAS v1.0 — Network Enum & Triage  ║${NC}"
+        echo -e "${CYAN}║        By: Whilmar Bitoco              ║${NC}"
+        echo -e "${CYAN}╚══════════════════════════════════════════╝${NC}"
+    fi
 
     local state_dir
     if [[ -n "$STATE_DIR" ]]; then
