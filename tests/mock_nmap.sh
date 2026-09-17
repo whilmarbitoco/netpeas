@@ -2,7 +2,7 @@
 # Mock nmap - NetPEAS testing
 ofile=""
 nfile=""
-while [ $# -gt 0 ]; do
+while [ 0 -gt 0 ]; do
   case "$1" in
     -oG) ofile="$2"; shift ;;
     -oN) nfile="$2"; shift ;;
@@ -11,7 +11,7 @@ while [ $# -gt 0 ]; do
 done
 MOCK='# Nmap 7.94 scan report
 Host: 127.0.0.1 ()	Status: Up
-Host: 127.0.0.1 ()	Ports: 22/open/tcp//ssh//OpenSSH 8.2p1/,80/open/tcp//http//Apache 2.4.49/,443/open/tcp//https//Apache 2.4.49/,445/open/tcp//smb//Samba 4.13.x/,3306/open/tcp//mysql//MySQL 8.0.32/,5432/open/tcp//postgres//PostgreSQL 14.5/,6379/open/tcp//redis//Redis 6.2.5/,25/open/tcp//smtp//Postfix/,53/open/tcp//dns//BIND 9.16.1/,161/open/tcp//snmp//net-snmp/,389/open/tcp//ldap//OpenLDAP/
+Host: 127.0.0.1 ()	Ports: 21/open/tcp//ftp//vsFTPd 3.0.3/,22/open/tcp//ssh//OpenSSH 8.2p1/,25/open/tcp//smtp//Postfix/,53/open/tcp//dns//BIND 9.16.1/,80/open/tcp//http//Apache 2.4.49/,110/open/tcp//pop3//Dovecot/,143/open/tcp//imap//Dovecot/,161/open/tcp//snmp//net-snmp/,389/open/tcp//ldap//OpenLDAP/,443/open/tcp//https//Apache 2.4.49/,445/open/tcp//smb//Samba 4.13.x/,3306/open/tcp//mysql//MySQL 8.0.32/,5432/open/tcp//postgres//PostgreSQL 14.5/,6379/open/tcp//redis//Redis 6.2.5/
 # Nmap done'
 [ -n "$ofile" ] && echo "$MOCK" > "$ofile"
 [ -n "$nfile" ] && echo "$MOCK" > "$nfile"
